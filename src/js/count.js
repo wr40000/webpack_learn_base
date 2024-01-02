@@ -1,4 +1,6 @@
+import { terraria } from "./public";
+
 export default function count(x, y) {
-    return x - y;
-  }
-  
+  terraria();
+  return x - y;
+}
