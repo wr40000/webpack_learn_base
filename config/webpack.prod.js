@@ -1,28 +1,35 @@
 // Node.js的核心模块，专门用来处理文件路径
 const path = require("path");
-const ESLintWebpackPlugin = require('eslint-webpack-plugin')
-const HTMLWebpackPlugin = require('html-webpack-plugin')
-const MiniCssExtractPlugin = require('mini-css-extract-plugin')
-const CssMinimizerPlugin = require('css-minimizer-webpack-plugin')
+const ESLintWebpackPlugin = require("eslint-webpack-plugin");
+const HTMLWebpackPlugin = require("html-webpack-plugin");
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
+const CopyWebpackPlugin = require('copy-webpack-plugin')
+const os = require('os')
+const TerserPlugin = require('terser-webpack-plugin')
 
+const threads = os.cpus().length;
 const getStyleLoaders = (preProcessor) => {
-  let loaderArr = [MiniCssExtractPlugin.loader,
-         "css-loader",
-         {
-          loader: 'postcss-loader',
-          options: {
-            postcssOptions:{
-              plugin: [
-                'postcss-present-env' // 能解决大多数样式兼容性问题
-              ]
-            }
-          }
-         },
-         preProcessor].filter((item)=>{
-          item
-         });
-  return loaderArr
-}
+  let loaderArr = [
+    MiniCssExtractPlugin.loader,
+    "css-loader",
+    {
+      loader: "postcss-loader",
+      options: {
+        postcssOptions: {
+          plugin: [
+            "postcss-present-env", // 能解决大多数样式兼容性问题
+          ],
+        },
+      },
+    },
+    preProcessor,
+  ];
+  if (!preProcessor) {
+    loaderArr.pop();
+  }
+  return loaderArr;
+};
 
 module.exports = {
   // 入口
@@ -35,7 +42,7 @@ module.exports = {
     path: path.resolve(__dirname, "../dist"),
     // filename: 输出文件名
     filename: "static/js/main.js",
-    clean: true
+    clean: true,
   },
   // 加载器
   module: {
@@ -57,7 +64,7 @@ module.exports = {
         use: getStyleLoaders("sass-loader"),
       },
       {
-        // 正则表达式不要加 g 
+        // 正则表达式不要加 g
         test: /\.(jpe?g|png|gif|webp)$/,
         type: "asset",
         parser: {
@@ -75,7 +82,7 @@ module.exports = {
         },
       },
       {
-        // 正则表达式不要加 g 
+        // 正则表达式不要加 g
         test: /\.(ttf|woff|woff2|map4|map3|avi)$/,
         type: "asset/resource",
         generator: {
@@ -89,25 +96,65 @@ module.exports = {
       },
       {
         test: /\.js$/,
-        exclude: /node_modules/,
-        loader: 'babel-loader'
+        // exclude: /node_modules/, // 排除node_modules代码不编译
+        include: path.resolve(__dirname, "../src"), // 也可以用包含
+        use: [
+          {
+            loader: 'thread-loader',
+            options: {
+              workers: threads
+            }
+          },
+          {
+            loader: 'babel-loader',
+            options: {
+              cacheDirectory: true
+            }
+          }
+        ]        
       },
     ],
   },
   // 插件
   plugins: [
     new ESLintWebpackPlugin({
-      context: path.resolve(__dirname, '../src')
+      context: path.resolve(__dirname, "../src"),
+      exclude: "node_modules",
+      cache: true,
+      cacheLocation: path.resolve(
+        __dirname,
+        "../node_modules/.cache/.eslintcache"
+        ),
+      threads: threads
     }),
     new HTMLWebpackPlugin({
       // HTML模版所在位置
-      template: path.resolve(__dirname, '../index.html')
+      template: path.resolve(__dirname, "../index.html"),
     }),
     new MiniCssExtractPlugin({
-      filename: 'static/css/main.css'
+      filename: "static/css/main.css",
     }),
-    new CssMinimizerPlugin()
+    
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: "./favicon.ico",  // 输入路径是相对于项目根目录的
+          to: "favicon.ico",
+          // noErrorOnMissing: true,  // 如果不存在favicon.ico，不产生错误警告
+        },
+      ],
+    }),
   ],
+  optimization: {
+    minimize: true,
+    minimizer: [
+      new CssMinimizerPlugin(),
+      new TerserPlugin({
+        parallel: threads
+      })
+    ]
+  },
   // 模式
   mode: "production",
+  devtool: "source-map",
 };
