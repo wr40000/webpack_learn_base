@@ -39,5 +39,6 @@
     "sass": "^1.69.6",
     "styl": "^0.2.9",
     "stylus": "^0.62.0"
-  }
+  },
+  "browserslist": ["last 2 versions", ">1%", "not dead"]
 }

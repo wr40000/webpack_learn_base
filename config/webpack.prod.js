@@ -52,7 +52,7 @@ module.exports = {
         use: getStyleLoaders(),
       },
       {
-        test: /\.lss$/i,
+        test: /\.less$/i,
         use: getStyleLoaders("less-loader"),
       },
       {

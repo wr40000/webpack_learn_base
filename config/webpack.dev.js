@@ -2,9 +2,7 @@
 const path = require("path");
 const ESLintWebpackPlugin = require("eslint-webpack-plugin");
 const HTMLWebpackPlugin = require("html-webpack-plugin");
-const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
 const os = require("os");
-const TerserPlugin = require("terser-webpack-plugin");
 
 const threads = os.cpus().length;
 module.exports = {
@@ -27,7 +25,7 @@ module.exports = {
             use: ["style-loader", "css-loader"],
           },
           {
-            test: /\.lss$/i,
+            test: /\.less$/i,
             use: ["style-loader", "css-loader", "less-loader"],
           },
           {
@@ -110,15 +108,6 @@ module.exports = {
       template: path.resolve(__dirname, "../index.html"),
     }),
   ],
-  optimization: {
-    minimize: true,
-    minimizer: [
-      new CssMinimizerPlugin(),
-      new TerserPlugin({
-        parallel: threads
-      })
-    ]
-  },
   devServer: {
     host: "localhost",
     port: "3000",

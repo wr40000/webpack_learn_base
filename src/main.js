@@ -2,8 +2,8 @@ import count from './js/count'
 import sum from './js/sum'
 
 import './style/index.css'
-import './less/index.css'
 import './styl/index.styl'
+import './less/index.less'
 import './sass/index.scss'
 
 import './style/iconfont.css'
