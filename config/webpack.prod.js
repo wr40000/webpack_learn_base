@@ -2,6 +2,27 @@
 const path = require("path");
 const ESLintWebpackPlugin = require('eslint-webpack-plugin')
 const HTMLWebpackPlugin = require('html-webpack-plugin')
+const MiniCssExtractPlugin = require('mini-css-extract-plugin')
+const CssMinimizerPlugin = require('css-minimizer-webpack-plugin')
+
+const getStyleLoaders = (preProcessor) => {
+  let loaderArr = [MiniCssExtractPlugin.loader,
+         "css-loader",
+         {
+          loader: 'postcss-loader',
+          options: {
+            postcssOptions:{
+              plugin: [
+                'postcss-present-env' // 能解决大多数样式兼容性问题
+              ]
+            }
+          }
+         },
+         preProcessor].filter((item)=>{
+          item
+         });
+  return loaderArr
+}
 
 module.exports = {
   // 入口
@@ -21,19 +42,19 @@ module.exports = {
     rules: [
       {
         test: /\.css$/i,
-        use: ["style-loader", "css-loader"],
+        use: getStyleLoaders(),
       },
       {
         test: /\.lss$/i,
-        use: ["style-loader", "css-loader", "less-loader"],
+        use: getStyleLoaders("less-loader"),
       },
       {
         test: /\.styl$/i,
-        use: ["style-loader", "css-loader", "stylus-loader"],
+        use: getStyleLoaders("stylus-loader"),
       },
       {
         test: /\.s[ac]ss/i,
-        use: ["style-loader", "css-loader", "sass-loader"],
+        use: getStyleLoaders("sass-loader"),
       },
       {
         // 正则表达式不要加 g 
@@ -81,7 +102,11 @@ module.exports = {
     new HTMLWebpackPlugin({
       // HTML模版所在位置
       template: path.resolve(__dirname, '../index.html')
-    })
+    }),
+    new MiniCssExtractPlugin({
+      filename: 'static/css/main.css'
+    }),
+    new CssMinimizerPlugin()
   ],
   // 模式
   mode: "production",
