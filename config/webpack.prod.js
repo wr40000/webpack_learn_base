@@ -7,6 +7,8 @@ const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const os = require("os");
 const TerserPlugin = require("terser-webpack-plugin");
+const PreloadWebpackPlugin = require('@vue/preload-webpack-plugin')
+const WorkboxPlugin = require('workbox-webpack-plugin')
 
 const threads = os.cpus().length;
 const getStyleLoaders = (preProcessor) => {
@@ -39,9 +41,11 @@ module.exports = {
     // path: 文件输出目录，必须是绝对路径
     // path.resolve()方法返回一个绝对路径
     // __dirname 当前文件的文件夹绝对路径
-    path: path.resolve(__dirname, "../dist"),
+    path: path.resolve(__dirname, "../dist"),// 生产模式需要输出
     // filename: 输出文件名
-    filename: "static/js/[name].js",
+    filename: "static/js/[name].[contenthash:8].js",// 入口文件打包输出资源命名方式
+    chunkFilename: "static/js/[name].[contenthash:8].chunk.js",// 动态导入输出资源命名方式
+    assetModuleFilename: "static/media/[name].[hash][ext]",// 图片、字体等资源命名方式（注意用hash）
     clean: true,
   },
   // 加载器
@@ -72,27 +76,27 @@ module.exports = {
             maxSize: 10 * 1024, // 小于10kb的图片会被base64处理
           },
         },
-        generator: {
-          // 将图片文件输出到 static/imgs 目录中
-          // 将图片文件命名 [hash:8][ext][query]
-          // [hash:8]: hash值取8位
-          // [ext]: 使用之前的文件扩展名
-          // [query]: 添加之前的query参数
-          filename: "static/images/[name].[hash:8][ext][query]",
-        },
+        // generator: {
+        //   // 将图片文件输出到 static/imgs 目录中
+        //   // 将图片文件命名 [hash:8][ext][query]
+        //   // [hash:8]: hash值取8位
+        //   // [ext]: 使用之前的文件扩展名
+        //   // [query]: 添加之前的query参数
+        //   filename: "static/images/[name].[hash:8][ext][query]",
+        // },
       },
       {
         // 正则表达式不要加 g
         test: /\.(ttf|woff|woff2|map4|map3|avi)$/,
         type: "asset/resource",
-        generator: {
-          // 将图片文件输出到 static/imgs 目录中
-          // 将图片文件命名 [hash:8][ext][query]
-          // [hash:8]: hash值取8位
-          // [ext]: 使用之前的文件扩展名
-          // [query]: 添加之前的query参数
-          filename: "static/media/[name].[hash:8][ext][query]",
-        },
+        // generator: {
+        //   // 将图片文件输出到 static/imgs 目录中
+        //   // 将图片文件命名 [hash:8][ext][query]
+        //   // [hash:8]: hash值取8位
+        //   // [ext]: 使用之前的文件扩展名
+        //   // [query]: 添加之前的query参数
+        //   filename: "static/media/[name].[hash:8][ext][query]",
+        // },
       },
       {
         test: /\.js$/,
@@ -110,7 +114,7 @@ module.exports = {
             options: {
               cacheDirectory: true, // 开启babel编译缓存
               cacheCompression: false, // 缓存文件不要压缩
-              plugins: ["@babel/plugin-transform-runtime"]
+              plugins: ["@babel/plugin-transform-runtime"],
             },
           },
         ],
@@ -134,7 +138,8 @@ module.exports = {
       template: path.resolve(__dirname, "../index.html"),
     }),
     new MiniCssExtractPlugin({
-      filename: "static/css/main.css",
+      filename: "static/css/[name].[contenthash:8].css",
+      chunkFilename: "static/css/[name].[contenthash:8].chunk.css"
     }),
 
     new CopyWebpackPlugin({
@@ -146,6 +151,17 @@ module.exports = {
         },
       ],
     }),
+    new PreloadWebpackPlugin({
+      rel: "preload", // preload兼容性更好
+      as: "script",
+      // rel: 'prefetch' // prefetch兼容性更差
+    }),
+    new WorkboxPlugin.GenerateSW({
+      // 这些选项帮助快速启用 ServiceWorkers
+      // 不允许遗留任何“旧的” ServiceWorkers
+      clientsClaim: true,
+      skipWaiting: true
+    })
   ],
   optimization: {
     minimize: true,
@@ -165,18 +181,30 @@ module.exports = {
       // maxAsyncRequests: 30, // 按需加载时并行加载的文件的最大数量
       // maxInitialRequests: 30, // 入口js文件最大并行请求数量
       // enforceSizeThreshold: 50000, // 超过50kb一定会单独打包（此时会忽略minRemainingSize、maxAsyncRequests、maxInitialRequests）
-      cacheGroups: { // 组，哪些模块要打包到一个组
-        defaultVendors: { // 组名
+      cacheGroups: {
+        // 组，哪些模块要打包到一个组
+        defaultVendors: {
+          // 组名
           test: /[\\/]node_modules[\\/]/, // 需要打包到一起的模块
           priority: -10, // 权重（越大越高）
           reuseExistingChunk: true, // 如果当前 chunk 包含已从主 bundle 中拆分出的模块，则它将被重用，而不是生成新的模块
         },
-      //   default: { // 其他没有写的配置会使用上面的默认值
-      //     minChunks: 2, // 这里的minChunks权重更大
-      //     priority: -20,
-      //     reuseExistingChunk: true,
-      //   },
+        //   default: { // 其他没有写的配置会使用上面的默认值
+        //     minChunks: 2, // 这里的minChunks权重更大
+        //     priority: -20,
+        //     reuseExistingChunk: true,
+        //   },
+        default: {
+          // 其他没有写的配置会使用上面的默认值
+          minSize: 0, // 我们定义的文件体积太小了，所以要改打包的最小文件体积
+          minChunks: 2,
+          priority: -20,
+          reuseExistingChunk: true,
+        },
       },
+    },
+    runtimeChunk: {
+      name: (entrypoint) => `runtime~${entrypoint.name}`// runtime文件命名规则
     }
   },
   // 模式
