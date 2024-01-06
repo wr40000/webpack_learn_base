@@ -17,8 +17,8 @@ box2.onclick = () => {
   // webpackChunkName: "sum"：这是webpack动态导入模块命名的方式
   // "sum"将来就会作为[name]的值显示。
   import(/* webpackChunkName: "sum" */ "./js/sum.js").then((module) => {
-    console.log("sum-默认暴露", module);
-    console.log("sum-Module", module.sum(66, 222));
+    console.log("sum--默认暴露", module);
+    console.log("sum--Module", module.sum(66, 222));
   });
   // .then(({ sum }) => {
   //   命名暴露;
